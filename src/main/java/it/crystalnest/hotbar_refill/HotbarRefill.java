@@ -141,12 +141,13 @@ public class HotbarRefill extends JavaPlugin {
     }
     return false;
   }
+
   /**
    * Play Sound on player location.
    */
   public void playSound(Player player){
     LOGGER.atSevere().log("Playing Sound");
-//SFX_Player_Pickup_Item
+    //SFX_Player_Pickup_Item
     int index = SoundEvent.getAssetMap().getIndex("SFX_Player_Grab_Item");
     World world = player.getWorld();
     assert world != null;
@@ -159,6 +160,7 @@ public class HotbarRefill extends JavaPlugin {
       SoundUtil.playSoundEvent3dToPlayer(playerRef, index, SoundCategory.UI, transform.getPosition(), store.getStore());
     });
   }
+  
   /**
    * Get plugin instance.
    */
