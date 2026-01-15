@@ -2,12 +2,15 @@ package it.crystalnest.hotbar_refill;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -19,9 +22,10 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 /**
  * HotbarRefill plugin main class.
@@ -44,13 +48,12 @@ public class HotbarRefill extends JavaPlugin {
   protected void setup() {
     LOGGER.atInfo().log("Setting up plugin " + getName());
     getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, event -> {
-      // Check if the entity is a player and if the changed inventory is the hotbar.
       // TODO: maybe there is a more robust way to check which container it is.
       if (event.getEntity() instanceof Player player && event.getItemContainer().getCapacity() == player.getInventory().getHotbar().getCapacity()) {
         switch (event.getTransaction()) {
           case ItemStackTransaction transaction -> transaction.getSlotTransactions().forEach(t -> handleTransaction(player, t));
           case ItemStackSlotTransaction transaction -> handleTransaction(player, transaction);
-          default -> LOGGER.atSevere().log("Transaction detected: " + event.getTransaction());
+          default -> {}
         }
       }
     });
@@ -66,54 +69,74 @@ public class HotbarRefill extends JavaPlugin {
    */
   private void handleTransaction(Player player, ItemStackSlotTransaction transaction) {
     LOGGER.atSevere().log("Transaction: " + transaction);
-    LOGGER.atSevere().log("Transation Action: " + transaction.getAction());
-    LOGGER.atSevere().log("Transation Query: " + transaction.getQuery());
-    LOGGER.atSevere().log("Transation Remainder: " + transaction.getRemainder());
-    LOGGER.atSevere().log("Transaction slotAfter: " + transaction.getSlotAfter());
+    LOGGER.atSevere().log("Transaction Action: " + transaction.getAction());
+    LOGGER.atSevere().log("Transaction Query: " + transaction.getQuery());
+    LOGGER.atSevere().log("Transaction Remainder: " + transaction.getRemainder());
     LOGGER.atSevere().log("Transaction slotBefore: " + transaction.getSlotBefore());
+    LOGGER.atSevere().log("Transaction slotAfter: " + transaction.getSlotAfter());
     LOGGER.atSevere().log("Transaction output: " + transaction.getOutput());
     // TODO:
-    //  Check hoes (they are tools, but for some reason don't have the getTool() value).
-    //  Check spellbooks (need mana to do so, can't figure out how to test it in-game).
-    //  Check other inventories (e.g., backpack and tools and quiver) (can't figure out a way to test it in-game) (might be useful to use methods like getCombinedStorageFirst instead of just getStorage to check refills, giving priority to the inventory; we probably also want to exclude the armor slots and maybe the tools, depending on what that container is).
-    //  Distinguish between melee weapons and ranged weapons.
+    //  When picking up water with an empty bucket while having another empty bucket in the inventory, the bucket in the inventory disappears: first the empty bucket in the hotbar gets removed, then this plugin refills the hotbar using the empty bucket in the inventory, then the game sets the bucket in the hotbar filled with water.
     //  Remove logs.
-    if (transaction.getAction().isRemove() && !transaction.getAction().isDestroy()) {
-      if (!ItemStack.isEmpty(transaction.getSlotBefore()) && transaction.getSlotBefore().getQuantity() == 1) {
-        ItemStack before = transaction.getSlotBefore();
-        Item item = before.getItem();
-        for (String cat : item.getCategories()) {
-          LOGGER.atSevere().log("Item category: " + cat);
+    if (transaction.getAction().isRemove() || transaction.getAction().isDestroy()) {
+      ItemStack before = transaction.getSlotBefore();
+      if (!ItemStack.isEmpty(before) && shouldRefill(before, transaction.getSlotAfter())) {
+        for (Map.Entry<InteractionType, String> entry : before.getItem().getInteractions().entrySet()) {
+          LOGGER.atSevere().log("Interaction Type: " + entry.getKey() + " -> " + entry.getValue());
         }
-        // Check if the item is a tool.
-        if (item.getTool() != null) {
-          // If it has been broken with this interaction (it was NOT already broken) and there is no other tool of the same type in the inventory (first refill failed), try to refill with a better tool.
-          if (
-            (ItemStack.isEmpty(transaction.getSlotAfter()) || (!transaction.getSlotBefore().isBroken() && transaction.getSlotAfter().isBroken())) &&
-            !refill(player, transaction, itemStack -> itemStack.isEquivalentType(before) && !itemStack.isBroken())
-          ) {
-            refill(
-              player,
-              transaction,
-              itemStack -> itemStack.getItem().getTool() != null && Stream.of(itemStack.getItem().getTool().getSpecs()).allMatch(spec -> Arrays.stream(item.getTool().getSpecs()).anyMatch(s -> s.getGatherType().equals(spec.getGatherType()) && spec.getPower() >= s.getPower() && spec.getQuality() >= s.getQuality()))
-            );
-          }
-          // Check if the item is a weapon.
-        } else if (item.getWeapon() != null) {
-          // If it has been broken with this interaction (it was NOT already broken) and there is no other weapon of the same type in the inventory (first refill failed), try to refill with another weapon.
-          if (
-            (ItemStack.isEmpty(transaction.getSlotAfter()) || (!transaction.getSlotBefore().isBroken() && transaction.getSlotAfter().isBroken())) &&
-            !refill(player, transaction, itemStack -> itemStack.isEquivalentType(before) && !itemStack.isBroken())
-          ) {
-            refill(player, transaction, itemStack -> itemStack.getItem().getWeapon() != null);
-          }
-          // Otherwise, just try to refill with the same item type.
-        } else if (ItemStack.isEmpty(transaction.getSlotAfter()) || transaction.getSlotAfter().isBroken()) {
-          refill(player, transaction, itemStack -> itemStack.isEquivalentType(before));
+        if (!refill(player, transaction, candidate -> candidate.isEquivalentType(before) && !candidate.isBroken())) {
+          refill(player, transaction, candidate -> (candidate.isEquivalentType(before) || (before.getMaxDurability() > 0 && isSameItemType(before, candidate))) && !candidate.isBroken());
         }
       }
       LOGGER.atSevere().log("----------------------------------------------------");
     }
+  }
+
+  /**
+   * Determines whether the hotbar slot should be refilled based on the item stack before and after the transaction.
+   *
+   * @param before item stack before the transaction.
+   * @param after item stack after the transaction.
+   * @return whether the hotbar slot should be refilled.
+   */
+  private boolean shouldRefill(@Nonnull ItemStack before, @Nullable ItemStack after) {
+    return ItemStack.isEmpty(after) || (!before.isBroken() && after.isBroken());
+  }
+
+  /**
+   * Whether the two items are the same kind of item.
+   *
+   * @param itemStack1 first item.
+   * @param itemStack2 second item.
+   * @return whether the two items are the same kind of item.
+   */
+  private boolean isSameItemType(ItemStack itemStack1, ItemStack itemStack2) {
+    if (itemStack1.isEquivalentType(itemStack2)) {
+      return true;
+    }
+    Item item1 = itemStack1.getItem();
+    Item item2 = itemStack2.getItem();
+    if (item1.getUtility().isCompatible() != item2.getUtility().isCompatible()) {
+      return false;
+    }
+    if (item1.getTool() != item2.getTool() && item1.getWeapon() != item2.getWeapon()) {
+      return false;
+    }
+    Map<InteractionType, String> interactions1 = item1.getInteractions();
+    Map<InteractionType, String> interactions2 = item2.getInteractions();
+    return (interactions1.isEmpty() && interactions2.isEmpty()) || (isSameInteraction(interactions1, interactions2, InteractionType.Primary) && isSameInteraction(interactions1, interactions2, InteractionType.Secondary));
+  }
+
+  /**
+   * Checks whether the two items have the same interaction for the given interaction type.
+   *
+   * @param interactions1 first item interaction map.
+   * @param interactions2 second item interaction map.
+   * @param interaction interaction type to compare.
+   * @return whether the two items have the same interaction.
+   */
+  private boolean isSameInteraction(Map<InteractionType, String> interactions1, Map<InteractionType, String> interactions2, InteractionType interaction) {
+    return Objects.equals(interactions1.get(interaction), interactions2.get(interaction));
   }
 
   /**
@@ -125,10 +148,11 @@ public class HotbarRefill extends JavaPlugin {
    * @return true if the hotbar slot got refilled, false otherwise.
    */
   private boolean refill(Player player, ItemStackSlotTransaction transaction, Predicate<ItemStack> matchCondition) {
-    for(short slot = 0; slot < player.getInventory().getStorage().getCapacity(); ++slot) {
-      ItemStack itemStack = player.getInventory().getStorage().getItemStack(slot);
-      if (!ItemStack.isEmpty(itemStack) && matchCondition.test(itemStack)) {
-        player.getInventory().getStorage().moveItemStackFromSlotToSlot(slot, itemStack.getQuantity(), player.getInventory().getHotbar(), transaction.getSlot());
+    ItemContainer container = new CombinedItemContainer(player.getInventory().getStorage(), player.getInventory().getBackpack());
+    for (short slot = 0; slot < container.getCapacity(); ++slot) {
+      ItemStack candidate = container.getItemStack(slot);
+      if (!ItemStack.isEmpty(candidate) && matchCondition.test(candidate)) {
+        container.moveItemStackFromSlotToSlot(slot, candidate.getQuantity(), player.getInventory().getHotbar(), transaction.getSlot());
         playSound(player);
         return true;
       }
@@ -137,11 +161,11 @@ public class HotbarRefill extends JavaPlugin {
   }
 
   /**
-   * Plays a sound effect for the player when an hotbar slot gets refilled.
+   * Plays a sound effect for the player when a hotbar slot gets refilled.
    *
    * @param player player.
    */
-  public void playSound(Player player){
+  public void playSound(Player player) {
     World world = player.getWorld();
     if (world != null) {
       int index = SoundEvent.getAssetMap().getIndex("SFX_Player_Pickup_Item");
