@@ -1,13 +1,20 @@
 package it.crystalnest.hotbar_refill;
 
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.EventRegistration;
 import com.hypixel.hytale.event.IBaseEvent;
+import com.hypixel.hytale.event.IEvent;
+import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemToolSpec;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.command.commands.player.inventory.GiveCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.HotbarManager;
+import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
@@ -16,9 +23,15 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerMouseButtonEvent
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.*;
+import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.events.WorldEvent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
@@ -83,13 +96,14 @@ public class HotbarRefill extends JavaPlugin {
               transaction.getSlotBefore() != null &&
               !transaction.getSlotBefore().isBroken() &&
               transaction.getSlotAfter().isBroken() &&
-              !refill(player.getInventory().getStorage(), player.getInventory().getHotbar(), transaction, itemStack -> itemStack.isEquivalentType(query) && !itemStack.isBroken())
+              !refill(player.getInventory().getStorage(), player.getInventory().getHotbar(), transaction, itemStack -> itemStack.isEquivalentType(query) && !itemStack.isBroken(), player)
             ) {
               refill(
                 player.getInventory().getStorage(),
                 player.getInventory().getHotbar(),
                 transaction,
-                itemStack -> itemStack.getItem().getTool() != null && Stream.of(itemStack.getItem().getTool().getSpecs()).allMatch(spec -> Arrays.stream(item.getTool().getSpecs()).anyMatch(s -> s.getGatherType().equals(spec.getGatherType()) && spec.getPower() >= s.getPower() && spec.getQuality() >= s.getQuality()))
+                itemStack -> itemStack.getItem().getTool() != null && Stream.of(itemStack.getItem().getTool().getSpecs()).allMatch(spec -> Arrays.stream(item.getTool().getSpecs()).anyMatch(s -> s.getGatherType().equals(spec.getGatherType()) && spec.getPower() >= s.getPower() && spec.getQuality() >= s.getQuality())),
+                player
               );
             }
             // Check if the item is a weapon.
@@ -100,13 +114,13 @@ public class HotbarRefill extends JavaPlugin {
               transaction.getSlotBefore() != null &&
               !transaction.getSlotBefore().isBroken() &&
               transaction.getSlotAfter().isBroken() &&
-              !refill(player.getInventory().getStorage(), player.getInventory().getHotbar(), transaction, itemStack -> itemStack.isEquivalentType(query) && !itemStack.isBroken())
+              !refill(player.getInventory().getStorage(), player.getInventory().getHotbar(), transaction, itemStack -> itemStack.isEquivalentType(query) && !itemStack.isBroken(), player)
             ) {
-              refill(player.getInventory().getStorage(), player.getInventory().getHotbar(), transaction, itemStack -> itemStack.getItem().getWeapon() != null);
+              refill(player.getInventory().getStorage(), player.getInventory().getHotbar(), transaction, itemStack -> itemStack.getItem().getWeapon() != null,player);
             }
           // Otherwise, just try to refill with the same item type.
           } else {
-            refill(player.getInventory().getStorage(), player.getInventory().getHotbar(), transaction, itemStack -> itemStack.isEquivalentType(query));
+            refill(player.getInventory().getStorage(), player.getInventory().getHotbar(), transaction, itemStack -> itemStack.isEquivalentType(query),player);
           }
         }
         LOGGER.atSevere().log("----------------------------------------------------");
@@ -114,17 +128,37 @@ public class HotbarRefill extends JavaPlugin {
     });
   }
 
-  private boolean refill(ItemContainer container, ItemContainer hotbar, ItemStackSlotTransaction transaction, Predicate<ItemStack> matchCondition) {
+
+  private boolean refill(ItemContainer container, ItemContainer hotbar, ItemStackSlotTransaction transaction, Predicate<ItemStack> matchCondition, Player p) {
     for(short slot = 0; slot < container.getCapacity(); ++slot) {
       ItemStack itemStack = container.getItemStack(slot);
+
       if (!ItemStack.isEmpty(itemStack) && matchCondition.test(itemStack)) {
         container.moveItemStackFromSlotToSlot(slot, itemStack.getQuantity(), hotbar, transaction.getSlot());
+        playSound(p);
         return true;
       }
     }
     return false;
   }
-
+  /**
+   * Play Sound on player location.
+   */
+  public void playSound(Player player){
+    LOGGER.atSevere().log("Playing Sound");
+//SFX_Player_Pickup_Item
+    int index = SoundEvent.getAssetMap().getIndex("SFX_Player_Grab_Item");
+    World world = player.getWorld();
+    assert world != null;
+    EntityStore store = world.getEntityStore();
+    Ref<EntityStore> playerRef = player.getReference();
+    world.execute(() -> {
+      assert playerRef != null;
+      TransformComponent transform = store.getStore().getComponent(playerRef, EntityModule.get().getTransformComponentType());
+      assert transform != null;
+      SoundUtil.playSoundEvent3dToPlayer(playerRef, index, SoundCategory.UI, transform.getPosition(), store.getStore());
+    });
+  }
   /**
    * Get plugin instance.
    */
