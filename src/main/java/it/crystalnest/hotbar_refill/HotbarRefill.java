@@ -1,6 +1,7 @@
 package it.crystalnest.hotbar_refill;
 
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.SoundCategory;
@@ -13,13 +14,12 @@ import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
-import com.hypixel.hytale.server.core.modules.entity.EntityModule;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.Config;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,19 +37,48 @@ public class HotbarRefill extends JavaPlugin {
   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
   /**
+   * Singleton instance.
+   */
+  private static HotbarRefill INSTANCE;
+
+  /**
+   * Plugin configuration.
+   */
+  private final Config<HotbarRefillConfig> config = withConfig(HotbarRefillConfig.CODEC);
+
+  /**
    * @param init plugin initialization context.
    */
   public HotbarRefill(@Nonnull JavaPluginInit init) {
     super(init);
+    INSTANCE = this;
     LOGGER.atInfo().log(getName() + " Plugin loaded!");
   }
+
+  /**
+   * Returns the singleton instance of this plugin.
+   *
+   * @return singleton instance.
+   */
+  public static HotbarRefill get() {
+    return INSTANCE;
+  }
+
+  /**
+   * Returns the plugin configuration.
+   *
+   * @return plugin configuration.
+   */
+  public HotbarRefillConfig getConfig() {
+    return config.get();
+  }
+
 
   @Override
   protected void setup() {
     LOGGER.atInfo().log("Setting up plugin " + getName());
     getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, event -> {
-      // TODO: maybe there is a more robust way to check which container it is.
-      if (event.getEntity() instanceof Player player && event.getItemContainer().getCapacity() == player.getInventory().getHotbar().getCapacity()) {
+      if (event.getEntity() instanceof Player player && event.getItemContainer() == player.getInventory().getHotbar() && event.getTransaction().succeeded()) {
         switch (event.getTransaction()) {
           case ItemStackTransaction transaction -> transaction.getSlotTransactions().forEach(t -> handleTransaction(player, t));
           case ItemStackSlotTransaction transaction -> handleTransaction(player, transaction);
@@ -57,6 +86,11 @@ public class HotbarRefill extends JavaPlugin {
         }
       }
     });
+  }
+
+  @Override
+  protected void start() {
+    config.save();
   }
 
   /**
@@ -68,27 +102,13 @@ public class HotbarRefill extends JavaPlugin {
    * @param transaction item stack slot transaction.
    */
   private void handleTransaction(Player player, ItemStackSlotTransaction transaction) {
-    LOGGER.atSevere().log("Transaction: " + transaction);
-    LOGGER.atSevere().log("Transaction Action: " + transaction.getAction());
-    LOGGER.atSevere().log("Transaction Query: " + transaction.getQuery());
-    LOGGER.atSevere().log("Transaction Remainder: " + transaction.getRemainder());
-    LOGGER.atSevere().log("Transaction slotBefore: " + transaction.getSlotBefore());
-    LOGGER.atSevere().log("Transaction slotAfter: " + transaction.getSlotAfter());
-    LOGGER.atSevere().log("Transaction output: " + transaction.getOutput());
-    // TODO:
-    //  When picking up water with an empty bucket while having another empty bucket in the inventory, the bucket in the inventory disappears: first the empty bucket in the hotbar gets removed, then this plugin refills the hotbar using the empty bucket in the inventory, then the game sets the bucket in the hotbar filled with water.
-    //  Remove logs.
     if (transaction.getAction().isRemove() || transaction.getAction().isDestroy()) {
       ItemStack before = transaction.getSlotBefore();
-      if (!ItemStack.isEmpty(before) && shouldRefill(before, transaction.getSlotAfter())) {
-        for (Map.Entry<InteractionType, String> entry : before.getItem().getInteractions().entrySet()) {
-          LOGGER.atSevere().log("Interaction Type: " + entry.getKey() + " -> " + entry.getValue());
-        }
+      if (!ItemStack.isEmpty(before) && shouldRefill(before, transaction.getSlotAfter()) && (!before.getItemId().contains("Bucket") || !before.isEquivalentType(transaction.getQuery()))) {
         if (!refill(player, transaction, candidate -> candidate.isEquivalentType(before) && !candidate.isBroken())) {
           refill(player, transaction, candidate -> (candidate.isEquivalentType(before) || (before.getMaxDurability() > 0 && isSameItemType(before, candidate))) && !candidate.isBroken());
         }
       }
-      LOGGER.atSevere().log("----------------------------------------------------");
     }
   }
 
@@ -166,25 +186,17 @@ public class HotbarRefill extends JavaPlugin {
    * @param player player.
    */
   public void playSound(Player player) {
-    World world = player.getWorld();
-    if (world != null) {
-      int index = SoundEvent.getAssetMap().getIndex("SFX_Player_Pickup_Item");
-      EntityStore store = world.getEntityStore();
-      Ref<EntityStore> playerRef = player.getReference();
-      world.execute(() -> {
-        if (playerRef != null) {
-          TransformComponent transform = store.getStore().getComponent(playerRef, EntityModule.get().getTransformComponentType());
-          if (transform != null) {
-            SoundUtil.playSoundEvent3dToPlayer(playerRef, index, SoundCategory.UI, transform.getPosition(), store.getStore());
-          } else {
-            LOGGER.atWarning().log("Could not play sound because the TransformComponent is null!");
-          }
-        } else {
-          LOGGER.atWarning().log("Could not play sound because the Ref<EntityStore> for the player is null!");
-        }
-      });
+    Ref<EntityStore> ref = player.getReference();
+    if (ref != null && ref.isValid()) {
+      Store<EntityStore> store = ref.getStore();
+      PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+      if (playerRef != null && playerRef.isValid()) {
+        SoundUtil.playSoundEvent2dToPlayer(playerRef, SoundEvent.getAssetMap().getIndexOrDefault(getConfig().getRefillSound(), SoundEvent.getAssetMap().getIndex(HotbarRefillConfig.DEFAULT_REFILL_SOUND)), SoundCategory.UI);
+      } else {
+        LOGGER.atWarning().log("Could not play refill sound because the Player reference is not valid!");
+      }
     } else {
-      LOGGER.atWarning().log("Could not play sound because the World is null!");
+      LOGGER.atWarning().log("Could not play refill sound because the EntityStore reference is not valid!");
     }
   }
 }
