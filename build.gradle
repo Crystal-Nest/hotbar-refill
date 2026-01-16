@@ -1,6 +1,9 @@
 plugins {
-  id 'java'
-  id 'org.jetbrains.gradle.plugin.idea-ext' version '1.3'
+  id "java"
+  id "java-library"
+  id "maven-publish"
+  id "com.hypherionmc.modutils.modpublisher" version "2.1.8"
+  id "org.jetbrains.gradle.plugin.idea-ext" version "1.3"
 }
 
 import org.gradle.internal.os.OperatingSystem
@@ -34,7 +37,7 @@ else if (!file(project.findProperty('hytaleHome')).exists()) {
 }
 
 java {
-  toolchain.languageVersion = JavaLanguageVersion.of(25)
+  toolchain.languageVersion = JavaLanguageVersion.of(java_version)
   withSourcesJar()
   withJavadocJar()
 }
@@ -67,8 +70,9 @@ tasks.named('processResources') {
       manifestJson.Version = version
       manifestJson.Description = description
       manifestJson.Main = "$maven_group.${plugin_id.replace('-', '_')}.$plugin_name"
-      manifestJson.Website = "https://github.com/Crystal-Nest/$plugin_id"
+      manifestJson.Website = "https://github.com/$github_user/$plugin_id"
       manifestJson.IncludesAssetPack = includes_pack.toBoolean()
+      manifestJson.Authors = authors.split(", ").collect { [Name: it] }
       builtManifest.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(manifestJson))
     }
   }
@@ -94,4 +98,111 @@ idea.project.settings.runConfigurations {
     programParameters = createServerRunArguments(sourceSets.main.java.srcDirs.first().parentFile.absolutePath)
     workingDirectory = serverRunDir.absolutePath
   }
+}
+
+publishing {
+  repositories {
+    maven {
+      name = "GitHubPackages"
+      url = uri("https://maven.pkg.github.com/$github_user/$plugin_id")
+      credentials {
+        username = github_user
+        password = System.getenv("GITHUB_TOKEN") ?: ""
+      }
+    }
+  }
+  publications {
+    gpr(MavenPublication) {
+      groupId = maven_group
+      artifactId = plugin_id
+      version = project.version
+      from components.java
+      pom {
+        name = "$plugin_name v$version"
+        description = "$description"
+        url = "https://github.com/$github_user/$plugin_id"
+        issueManagement {
+          system = "github"
+          url = "https://github.com/$github_user/$plugin_id/issues"
+        }
+        licenses {
+          license {
+            name = license
+            url = "https://github.com/Crystal-Nest/.github/blob/main/LICENSE"
+          }
+        }
+        developers {
+          authors.split(", ").each { author ->
+            developer {
+              id = author.toLowerCase()
+              name = author
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// TODO: Update the publishing setup once https://github.com/firstdarkdev/modpublisher/issues/34 is completed.
+
+def changelog_body = "See [Changelog](https://github.com/$github_user/$plugin_id/blob/master/CHANGELOG.md#v${version.replaceAll('\\.', '')}---${new Date().format("yyyyMMdd")})."
+def version_type = version.replaceFirst("([0-9]+\\.?)+-?", "").with { it ? it : (version.startsWith("0") ? "beta" : "release") }
+
+publisher {
+  apiKeys {
+    github System.getenv("GITHUB_TOKEN") ?: ""
+//    modrinth System.getenv("MODTALE_TOKEN") ?: ""
+    curseforge System.getenv("CURSEFORGE_TOKEN") ?: ""
+  }
+  setVersion(project.version)
+  setChangelog(changelog_body)
+  setVersionType(version_type)
+  setArtifact(jar)
+  setDisableMalwareScanner(true) // Disable the built in Fractureizer scanner.
+  setDisableEmptyJarCheck(true) // Disable check for valid mod metadata entry in artifact, which could possibly mean that the jar is empty.
+//  setModrinthID(plugin_id)
+  setCurseID(plugin_id)
+//  setGameVersions(minecraft_version)
+  setDisplayName("$plugin_name v$project.version")
+  setJavaVersions([JavaVersion.VERSION_25]) // Remember to update this to match java_version gradle property.
+  github {
+    repo = "$github_user/$plugin_id"
+    tag = "v${project.version}"
+    displayName("v${project.version}")
+    target = project.version
+    createTag = true
+    createRelease = true
+    updateRelease = true
+    draft = false
+  }
+//  modrinthDepends {
+//    required "cobweb"
+//    switch (loader) {
+//      case "Fabric":
+//        required "fabric-api"
+//        required "forge-config-api-port"
+//        break
+//      case "NeoForge":
+//        break
+//    }
+//  }
+//  curseDepends {
+//    required "cobweb"
+//    switch (loader) {
+//      case "Fabric":
+//        required "fabric-api"
+//        required "forge-config-api-port"
+//        break
+//      case "NeoForge":
+//        break
+//    }
+//  }
+}
+
+tasks.register("publishPlugin") {
+  group = "publishing"
+  description = "Publish the plugin to all platforms"
+  dependsOn "publish"
+  dependsOn "publishMod"
 }

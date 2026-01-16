@@ -1,1 +1,8 @@
+pluginManagement {
+  repositories {
+    gradlePluginPortal()
+    maven { url "https://maven.firstdark.dev/releases"}
+  }
+}
+
 rootProject.name = "HotbarRefill"
