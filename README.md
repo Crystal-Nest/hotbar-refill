@@ -9,7 +9,10 @@ Works with weapons and tools as well, refilling your slot when they break if a s
 
 ## ✨ **Features**
 
-USE EXAMPLES
+Simply run out of blocks, foods, ammos, whatever, and watch them get automatically refilled in your hotbar!  
+Works with tools and weapons as well, matching the same kind of tool/weapon (e.g., pickaxe-pickaxe, hatchet-hatchet, sword-sword, flail-flail, bow-bow, etc.).
+
+A more detailed description of the features will come shortly!
 
 ## ⚙️ **Configuration**
 

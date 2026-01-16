@@ -9,7 +9,7 @@ and this project adheres to [Crystal Nest Semantic Versioning](https://crystalne
 
 - Nothing new.
 
-## [v1.0.0] - 2026/01/dd
+## [v1.0.0] - 2026/01/19
 
 - Added hotbar refill functionality.
 
