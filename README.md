@@ -9,10 +9,28 @@ Works with weapons and tools as well, refilling your slot when they break if a s
 
 ## ✨ **Features**
 
-Simply run out of blocks, foods, ammos, whatever, and watch them get automatically refilled in your hotbar!  
-Works with tools and weapons as well, matching the same kind of tool/weapon (e.g., pickaxe-pickaxe, hatchet-hatchet, sword-sword, flail-flail, bow-bow, etc.).
+Run out of blocks, foods, ammo, or really whatever? Hotbar Refill has got you covered!
 
-A more detailed description of the features will come shortly!
+Whenever you run out of an item in your hotbar, it will automatically search your inventory and backpack for a matching item and refill the hotbar slot!  
+Works with stackable items (e.g., blocks, food, arrows, etc.) as well as weapons and tools, making sure to give you only suitable replacements!
+
+When an item gets replaced, you'll get a sound notification (configurable, see below) so you know when a refill has occurred.
+
+Examples of hotbar refills include:
+
+- Running out of block to place:  
+  ![Block refill](https://raw.githubusercontent.com/crystal-nest/mod-fancy-assets/main/hotbar-refill/block-refill.gif "Block refill")
+- Running out of food to eat:  
+  ![Food refill](https://raw.githubusercontent.com/crystal-nest/mod-fancy-assets/main/hotbar-refill/food-refill.gif "Food refill")
+- Tossing away items:  
+  ![Toss refill](https://raw.githubusercontent.com/crystal-nest/mod-fancy-assets/main/hotbar-refill/toss-refill.gif "Toss refill")
+- Breaking a tool:  
+  ![Pickaxe refill](https://raw.githubusercontent.com/crystal-nest/mod-fancy-assets/main/hotbar-refill/pickaxe-refill.gif "Pickaxe refill")  
+  ![Hoe refill](https://raw.githubusercontent.com/crystal-nest/mod-fancy-assets/main/hotbar-refill/hoe-refill.gif "Hoe refill")
+- Breaking a weapon while fighting:  
+  ![Weapon refill](https://raw.githubusercontent.com/crystal-nest/mod-fancy-assets/main/hotbar-refill/weapon-refill.gif "Weapon refill")
+- Keeping an eye on your ammo:  
+  ![Ammo refill](https://raw.githubusercontent.com/crystal-nest/mod-fancy-assets/main/hotbar-refill/bow-refill.gif "Ammo refill")
 
 ## ⚙️ **Configuration**
 
