@@ -67,7 +67,7 @@ tasks.named('processResources') {
       def manifestJson = new groovy.json.JsonSlurper().parseText(builtManifest.text)
       manifestJson.Group = plugin_group
       manifestJson.Name = plugin_name
-      manifestJson.Version = version
+      manifestJson.Version = mod_version
       manifestJson.Description = description
       manifestJson.Main = "$maven_group.${plugin_id.replace('-', '_')}.$plugin_name"
       manifestJson.Website = "https://github.com/$github_user/$plugin_id"
@@ -115,10 +115,10 @@ publishing {
     gpr(MavenPublication) {
       groupId = maven_group
       artifactId = plugin_id
-      version = project.version
+      version = project.mod_version
       from components.java
       pom {
-        name = "$plugin_name v$version"
+        name = "$plugin_name v$mod_version"
         description = "$description"
         url = "https://github.com/$github_user/$plugin_id"
         issueManagement {
@@ -144,8 +144,8 @@ publishing {
   }
 }
 
-def changelog_body = "See [Changelog](https://github.com/$github_user/$plugin_id/blob/master/CHANGELOG.md#v${version.replaceAll('\\.', '')}---${new Date().format("yyyyMMdd")})."
-def version_type = version.replaceFirst("([0-9]+\\.?)+-?", "").with { it ? it : (version.startsWith("0") ? "beta" : "release") }
+def changelog_body = "See [Changelog](https://github.com/$github_user/$plugin_id/blob/master/CHANGELOG.md#v${mod_version.replaceAll('\\.', '')}---${new Date().format("yyyyMMdd")})."
+def version_type = mod_version.replaceFirst("([0-9]+\\.?)+-?", "").with { it ? it : (mod_version.startsWith("0") ? "beta" : "release") }
 
 publisher {
   apiKeys {
@@ -154,8 +154,8 @@ publisher {
     curseforge System.getenv("CURSEFORGE_TOKEN") ?: ""
   }
   setGameType("hytale")
-  setDebug(true)
-  setVersion(project.version)
+  setDebug(true) // TODO: Disable debug for production releases.
+  setVersion(project.mod_version)
   setChangelog(changelog_body)
   setVersionType(version_type)
   setArtifact(jar)
@@ -164,13 +164,13 @@ publisher {
   setModtaleID(plugin_id)
   setCurseID(plugin_id)
   setGameVersions("early access")
-  setDisplayName("$plugin_name v$project.version")
+  setDisplayName("$plugin_name v$project.mod_version")
   setJavaVersions([JavaVersion.VERSION_25]) // Remember to update this to match java_version gradle property.
   github {
     repo = "$github_user/$plugin_id"
-    tag = "v${project.version}"
-    displayName("v${project.version}")
-    target = project.version
+    tag = "v${project.mod_version}"
+    displayName("v${project.mod_version}")
+    target = project.mod_version
     createTag = true
     createRelease = true
     updateRelease = true

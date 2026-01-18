@@ -1,0 +1,40 @@
+name: Release Workflow
+
+on:
+  workflow_call:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      MODTALE_TOKEN: ${{ secrets.MODTALE_TOKEN }}
+      CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Pull
+        run: git pull --no-rebase
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: 25
+          distribution: 'microsoft'
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+      - name: Set permission
+        run: chmod +x ./gradlew
+      - name: Build
+        run: |
+          ./gradlew wrapper
+          ./gradlew build
+      - name: Set Command Release
+        run: |
+          ./gradlew publishPlugin --stacktrace
