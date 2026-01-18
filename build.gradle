@@ -154,7 +154,6 @@ publisher {
     curseforge System.getenv("CURSEFORGE_TOKEN") ?: ""
   }
   setGameType("hytale")
-  setDebug(true) // TODO: Disable debug for production releases.
   setVersion(project.mod_version)
   setChangelog(changelog_body)
   setVersionType(version_type)
@@ -162,7 +161,7 @@ publisher {
   setDisableMalwareScanner(true) // Disable the built in Fractureizer scanner.
   setDisableEmptyJarCheck(true) // Disable check for valid mod metadata entry in artifact, which could possibly mean that the jar is empty.
   setModtaleID(plugin_id)
-  setCurseID(plugin_id)
+  setCurseID(curseforge_id)
   setGameVersions("early access")
   setDisplayName("$plugin_name v$project.mod_version")
   setJavaVersions([JavaVersion.VERSION_25]) // Remember to update this to match java_version gradle property.
