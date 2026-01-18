@@ -1,4 +1,4 @@
-name: Release Workflow
+name: Full Release Workflow
 
 on:
   workflow_dispatch:
