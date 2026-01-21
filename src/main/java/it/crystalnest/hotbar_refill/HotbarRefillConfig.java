@@ -292,37 +292,158 @@ public class HotbarRefillConfig {
      * Codec.
      */
     public static final BuilderCodec<BehaviorConfig> CODEC = BuilderCodec.builder(BehaviorConfig.class, BehaviorConfig::new)
-      .append(new KeyedCodec<>("When", When.CODEC), (config, value) -> config.when = value, config -> config.when).add()
-      .append(new KeyedCodec<>("Similar", Similar.CODEC), (config, value) -> config.similar = value, config -> config.similar).add()
+      .append(new KeyedCodec<>("Category", Type.CODEC), (config, value) -> config.category = value, config -> config.category).add()
+      .append(new KeyedCodec<>("Similar", Type.CODEC), (config, value) -> config.similar = value, config -> config.similar).add()
       .build();
 
-    private When when = new When();
-    private Similar similar = new Similar();
+    /**
+     * Category type configuration.
+     */
+    private Type category = new Type();
 
-    public static class When {
-      public static final BuilderCodec<When> CODEC = BuilderCodec.builder(When.class, When::new)
-        .append(new KeyedCodec<>("OnBreak", Codec.BOOLEAN), (config, value) -> config.onBreak = value, config -> config.onBreak).add()
-        .append(new KeyedCodec<>("OnPlace", Codec.BOOLEAN), (config, value) -> config.onPlace = value, config -> config.onPlace).add()
-        .append(new KeyedCodec<>("OnToss", Codec.BOOLEAN), (config, value) -> config.onToss = value, config -> config.onToss).add()
-        .append(new KeyedCodec<>("OnEat", Codec.BOOLEAN), (config, value) -> config.onEat = value, config -> config.onEat).add()
-        .build();
+    /**
+     * Similar type configuration.
+     */
+    private Type similar = new Type(true, true, false, true, false, true);
 
-      private boolean onBreak = true;
-      private boolean onPlace = true;
-      private boolean onToss = true;
-      private boolean onEat = true;
+    /**
+     * Returns the category type configuration.
+     *
+     * @return category type configuration.
+     */
+    public Type category() {
+      return category;
     }
 
-    public static class Similar {
-      public static final BuilderCodec<Similar> CODEC = BuilderCodec.builder(Similar.class, Similar::new)
+    /**
+     * Returns the similar type configuration.
+     *
+     * @return similar type configuration.
+     */
+    public Type similar() {
+      return similar;
+    }
+
+    /**
+     * Type configuration.
+     */
+    public static class Type {
+      /**
+       * Codec.
+       */
+      public static final BuilderCodec<Type> CODEC = BuilderCodec.builder(Type.class, Type::new)
         .append(new KeyedCodec<>("Tool", Codec.BOOLEAN), (config, value) -> config.tool = value, config -> config.tool).add()
-        .append(new KeyedCodec<>("Food", Codec.BOOLEAN), (config, value) -> config.food = value, config -> config.food).add()
+        .append(new KeyedCodec<>("Weapon", Codec.BOOLEAN), (config, value) -> config.weapon = value, config -> config.weapon).add()
         .append(new KeyedCodec<>("Block", Codec.BOOLEAN), (config, value) -> config.block = value, config -> config.block).add()
+        .append(new KeyedCodec<>("Food", Codec.BOOLEAN), (config, value) -> config.food = value, config -> config.food).add()
+        .append(new KeyedCodec<>("Potion", Codec.BOOLEAN), (config, value) -> config.potion = value, config -> config.potion).add()
+        .append(new KeyedCodec<>("Other", Codec.BOOLEAN), (config, value) -> config.other = value, config -> config.other).add()
         .build();
 
-      private boolean tool = true;
-      private boolean food = true;
-      private boolean block = false;
+      /**
+       * Tool type.
+       */
+      private boolean tool;
+
+      /**
+       * Weapon type.
+       */
+      private boolean weapon;
+
+      /**
+       * Block type.
+       */
+      private boolean block;
+
+      /**
+       * Food type.
+       */
+      private boolean food;
+
+      /**
+       * Potion type.
+       */
+      private boolean potion;
+
+      /**
+       * Other type.
+       */
+      private boolean other;
+
+      public Type() {
+        this(true, true, true, true, true, true);
+      }
+
+      /**
+       * @param tool {@link #tool}.
+       * @param weapon {@link #weapon}.
+       * @param block {@link #block}.
+       * @param food {@link #food}.
+       * @param potion {@link #potion}.
+       * @param other {@link #other}.
+       */
+      public Type(boolean tool, boolean weapon, boolean block, boolean food, boolean potion, boolean other) {
+        this.tool = tool;
+        this.weapon = weapon;
+        this.block = block;
+        this.food = food;
+        this.potion = potion;
+        this.other = other;
+      }
+
+      /**
+       * Returns whether tool type is enabled.
+       *
+       * @return whether tool type is enabled.
+       */
+      public boolean tool() {
+        return tool;
+      }
+
+      /**
+       * Returns whether weapon type is enabled.
+       *
+       * @return whether weapon type is enabled.
+       */
+      public boolean weapon() {
+        return weapon;
+      }
+
+      /**
+       * Returns whether block type is enabled.
+       *
+       * @return whether block type is enabled.
+       */
+      public boolean block() {
+        return block;
+      }
+
+      /**
+       * Returns whether food type is enabled.
+       *
+       * @return whether food type is enabled.
+       */
+      public boolean food() {
+        return food;
+      }
+
+      /**
+       * Returns whether potion type is enabled.
+       *
+       * @return whether potion type is enabled.
+       */
+      public boolean potion() {
+        return potion;
+      }
+
+      /**
+       * Returns whether other type is enabled.
+       *
+       * @return whether other type is enabled.
+       */
+      public boolean other() {
+        return other;
+      }
     }
   }
 }

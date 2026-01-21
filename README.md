@@ -7,6 +7,8 @@
 Automatically refill your hotbar when running out of items if a replacement exists in your inventory.  
 Works with weapons and tools as well, refilling your slot when they break if a suitable replacement is found in your inventory.
 
+Every feature of this mod is highly configurable individually, allowing you to customize the behavior to your liking!
+
 ## ✨ **Features**
 
 Run out of blocks, foods, ammo, or really whatever? Hotbar Refill has got you covered!
@@ -16,8 +18,7 @@ Works with stackable items (e.g., blocks, food, arrows, etc.) as well as weapons
 
 When an item gets replaced, you'll get a sound notification so you know when a refill has occurred.
 
-Every feature of this mod is highly configurable individually, allowing you to customize the behavior to your liking!  
-See the section below to know more.
+The configuration is explained in details further below.
 
 Examples of hotbar refills include:
 
@@ -70,32 +71,25 @@ Configuration is located at `mods/CrystalNest_HotbarRefill/config.toml`.
   },
   // Refill behavior configuration.
   "RefillBehavior": {
-    // When to trigger refills.
-    "When": {
-      // Trigger refill when a tool/weapon breaks.
-      "OnBreak": true,
-      // Trigger refill when running out of blocks to place.
-      "OnPlace": true,
-      // Trigger refill when running out of items to toss.
-      "OnToss": true,
-      // Trigger refill when running out of food to eat.
-      "OnEat": true
-    },
-    // Which items to match for refills.
-    // Regardless of these settings, exact matches will always be given priority.
-    "Similar": {
-      // Whether to match tool/weapons loosely (true) or exactly (false).
-      // When matchin loosely, any pickaxe will refill for any other pickaxe, same for swords, axes, etc.
-      // When matching exactly, only the exact same item will refill (e.g., Copper Pickaxe only refills with another Copper Pickaxe).
+    // Categories of items to automatically refill when running out.
+    "Category": {
       "Tool": true,
-      // Whether to match food loosely (true) or exactly (false).
-      // When matchin loosely, any food will refill for any other food.
-      // When matching exactly, only the exact same food will refill (e.g., Wild Berries only refills with other Wild Berries).
+      "Weapon": true,
+      "Block": true,
       "Food": true,
-      // Whether to match blocks loosely (true) or exactly (false).
-      // When matchin loosely, any block will refill for any other block.
-      // When matching exactly, only the exact same block will refill (e.g., Dirt only refills with other Dirt).
-      "Block": false
+      "Potion": true,
+      "Other": true
+    },
+    // Matching strategy to use when searching for refill items.
+    // If false, only exact matches will be considered.
+    // If true, similar items will also be considered (e.g., any type of pickaxe for a broken pickaxe).
+    "Similar": {
+      "Tool": true,
+      "Weapon": true,
+      "Block": false,
+      "Food": true,
+      "Potion": false,
+      "Other": true
     }
   }
 }
