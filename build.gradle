@@ -169,7 +169,7 @@ publisher {
     repo = "$github_user/$plugin_id"
     tag = "v${project.mod_version}"
     displayName("v${project.mod_version}")
-    target = project.mod_version
+    target = "main"
     createTag = true
     createRelease = true
     updateRelease = true
