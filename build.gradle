@@ -68,7 +68,7 @@ tasks.named('processResources') {
       manifestJson.Group = plugin_group
       manifestJson.Name = plugin_name
       manifestJson.Version = mod_version
-      manifestJson.Description = description
+      manifestJson.Description = mod_description
       manifestJson.Main = "$maven_group.${plugin_id.replace('-', '_')}.$plugin_name"
       manifestJson.Website = "https://github.com/$github_user/$plugin_id"
       manifestJson.IncludesAssetPack = includes_pack.toBoolean()
@@ -119,7 +119,7 @@ publishing {
       from components.java
       pom {
         name = "$plugin_name v$mod_version"
-        description = "$description"
+        description = "$mod_description"
         url = "https://github.com/$github_user/$plugin_id"
         issueManagement {
           system = "github"
