@@ -23,6 +23,8 @@ import com.hypixel.hytale.server.core.util.Config;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -73,7 +75,6 @@ public class HotbarRefill extends JavaPlugin {
     return config.get();
   }
 
-
   @Override
   protected void setup() {
     LOGGER.atInfo().log("Setting up plugin " + getName());
@@ -104,7 +105,12 @@ public class HotbarRefill extends JavaPlugin {
   private void handleTransaction(Player player, ItemStackSlotTransaction transaction) {
     if (transaction.getAction().isRemove() || transaction.getAction().isDestroy()) {
       ItemStack before = transaction.getSlotBefore();
-      if (!ItemStack.isEmpty(before) && shouldRefill(before, transaction.getSlotAfter()) && (!before.getItemId().contains("Bucket") || !before.isEquivalentType(transaction.getQuery()))) {
+      if (!ItemStack.isEmpty(before)) {
+        for (String category : before.getItem().getCategories()) {
+          LOGGER.atSevere().log(category);
+        }
+      }
+      if (!ItemStack.isEmpty(before) && shouldRefill(before, transaction.getSlotAfter()) && bucketCheck(before, transaction.getQuery())) {
         if (!refill(player, transaction, candidate -> candidate.isEquivalentType(before) && !candidate.isBroken())) {
           refill(player, transaction, candidate -> (candidate.isEquivalentType(before) || (before.getMaxDurability() > 0 && isSameItemType(before, candidate))) && !candidate.isBroken());
         }
@@ -121,6 +127,17 @@ public class HotbarRefill extends JavaPlugin {
    */
   private boolean shouldRefill(@Nonnull ItemStack before, @Nullable ItemStack after) {
     return ItemStack.isEmpty(after) || (!before.isBroken() && after.isBroken());
+  }
+
+  /**
+   * Ad-hoc check for buckets to prevent deleting empty buckets from the inventory.
+   *
+   * @param before item stack before the transaction.
+   * @param query transaction query.
+   * @return whether the bucket check passes.
+   */
+  private boolean bucketCheck(ItemStack before, ItemStack query) {
+    return !before.getItemId().contains("Bucket") || !before.isEquivalentType(query);
   }
 
   /**
@@ -168,7 +185,7 @@ public class HotbarRefill extends JavaPlugin {
    * @return true if the hotbar slot got refilled, false otherwise.
    */
   private boolean refill(Player player, ItemStackSlotTransaction transaction, Predicate<ItemStack> matchCondition) {
-    ItemContainer container = new CombinedItemContainer(player.getInventory().getStorage(), player.getInventory().getBackpack());
+    ItemContainer container = getContainer(player);
     for (short slot = 0; slot < container.getCapacity(); ++slot) {
       ItemStack candidate = container.getItemStack(slot);
       if (!ItemStack.isEmpty(candidate) && matchCondition.test(candidate)) {
@@ -181,22 +198,43 @@ public class HotbarRefill extends JavaPlugin {
   }
 
   /**
+   * Returns the appropriate (combined) item container to search for refill items, based on the plugin configuration.
+   *
+   * @param player player.
+   * @return appropriate item container.
+   */
+  private ItemContainer getContainer(Player player) {
+    HotbarRefillConfig.InventoryConfig inventoryConfig = getConfig().inventoryConfig();
+    String[] priorities = getConfig().inventoryConfig().priority();
+    List<ItemContainer> containers = new ArrayList<>(priorities.length);
+    for (String id : priorities) {
+      HotbarRefillConfig.RefillSource source = HotbarRefillConfig.RefillSource.fromId(id);
+      if (source.enabled(inventoryConfig)) {
+        containers.add(source.toContainer(player));
+      }
+    }
+    return new CombinedItemContainer(containers.toArray(ItemContainer[]::new));
+  }
+
+  /**
    * Plays a sound effect for the player when a hotbar slot gets refilled.
    *
    * @param player player.
    */
   public void playSound(Player player) {
-    Ref<EntityStore> ref = player.getReference();
-    if (ref != null && ref.isValid()) {
-      Store<EntityStore> store = ref.getStore();
-      PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-      if (playerRef != null && playerRef.isValid()) {
-        SoundUtil.playSoundEvent2dToPlayer(playerRef, SoundEvent.getAssetMap().getIndexOrDefault(getConfig().getRefillSound(), SoundEvent.getAssetMap().getIndex(HotbarRefillConfig.DEFAULT_REFILL_SOUND)), SoundCategory.UI);
+    if (getConfig().soundConfig().enable()) {
+      Ref<EntityStore> ref = player.getReference();
+      if (ref != null && ref.isValid()) {
+        Store<EntityStore> store = ref.getStore();
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef != null && playerRef.isValid()) {
+          SoundUtil.playSoundEvent2dToPlayer(playerRef, SoundEvent.getAssetMap().getIndexOrDefault(getConfig().soundConfig().id(), SoundEvent.getAssetMap().getIndex(HotbarRefillConfig.SoundConfig.DEFAULT_REFILL_SOUND)), SoundCategory.UI);
+        } else {
+          LOGGER.atWarning().log("Could not play refill sound because the Player reference is not valid!");
+        }
       } else {
-        LOGGER.atWarning().log("Could not play refill sound because the Player reference is not valid!");
+        LOGGER.atWarning().log("Could not play refill sound because the EntityStore reference is not valid!");
       }
-    } else {
-      LOGGER.atWarning().log("Could not play refill sound because the EntityStore reference is not valid!");
     }
   }
 }

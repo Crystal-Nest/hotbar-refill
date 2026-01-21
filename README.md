@@ -14,7 +14,10 @@ Run out of blocks, foods, ammo, or really whatever? Hotbar Refill has got you co
 Whenever you run out of an item in your hotbar, it will automatically search your inventory and backpack for a matching item and refill the hotbar slot!  
 Works with stackable items (e.g., blocks, food, arrows, etc.) as well as weapons and tools, making sure to give you only suitable replacements!
 
-When an item gets replaced, you'll get a sound notification (configurable, see below) so you know when a refill has occurred.
+When an item gets replaced, you'll get a sound notification so you know when a refill has occurred.
+
+Every feature of this mod is highly configurable individually, allowing you to customize the behavior to your liking!  
+See the section below to know more.
 
 Examples of hotbar refills include:
 
@@ -36,13 +39,72 @@ Examples of hotbar refills include:
 
 Configuration is located at `mods/CrystalNest_HotbarRefill/config.toml`.
 
-The only available option is to change the sound played when an item is refilled:
 ```json
 {
-  "RefillSound": "SFX_Player_Pickup_Item"
+  // Sound effect configuration.
+  "SoundEffect": {
+    // Whether to play the sound on refill.
+    "Enable": true,
+    // Sound effect ID to play on refill.
+    // Check the full list of in-game sounds here: https://hytalemodding.dev/en/docs/server/sounds
+    "ID": "SFX_Player_Pickup_Item"
+  },
+  // Inventory access configuration.
+  "InventoryAccess": {
+    // Whether to search in the hotbar for refill items.
+    "FromHotbar": false,
+    // Whether to search in the backpack for refill items.
+    "FromBackpack": true,
+    // Whether to search in the main storage for refill items.
+    "FromStorage": true,
+    // Whether to search in the utility slots for refill items.
+    "FromUtility": false,
+    // Priority order for searching inventory sections.
+    // NEVER REMOVE or ADD entries to this list, ONLY MOVE the existing ones around.
+    "Priority": [
+      "Storage",
+      "Backpack",
+      "Hotbar",
+      "Utility"
+    ]
+  },
+  // Refill behavior configuration.
+  "RefillBehavior": {
+    // When to trigger refills.
+    "When": {
+      // Trigger refill when a tool/weapon breaks.
+      "OnBreak": true,
+      // Trigger refill when running out of blocks to place.
+      "OnPlace": true,
+      // Trigger refill when running out of items to toss.
+      "OnToss": true,
+      // Trigger refill when running out of food to eat.
+      "OnEat": true
+    },
+    // Which items to match for refills.
+    // Regardless of these settings, exact matches will always be given priority.
+    "Similar": {
+      // Whether to match tool/weapons loosely (true) or exactly (false).
+      // When matchin loosely, any pickaxe will refill for any other pickaxe, same for swords, axes, etc.
+      // When matching exactly, only the exact same item will refill (e.g., Copper Pickaxe only refills with another Copper Pickaxe).
+      "Tool": true,
+      // Whether to match food loosely (true) or exactly (false).
+      // When matchin loosely, any food will refill for any other food.
+      // When matching exactly, only the exact same food will refill (e.g., Wild Berries only refills with other Wild Berries).
+      "Food": true,
+      // Whether to match blocks loosely (true) or exactly (false).
+      // When matchin loosely, any block will refill for any other block.
+      // When matching exactly, only the exact same block will refill (e.g., Dirt only refills with other Dirt).
+      "Block": false
+    }
+  }
 }
 ```
-It defaults to the sound of picking up items; find the list of in-game sounds [here](https://hytalemodding.dev/en/docs/server/sounds).
+The default values are the ones shown above. Feel free to modify them to your liking!
+
+## 🗳️ **Issues and suggestions**
+
+If you encounter any issues or have suggestions for new features, please open an issue on the [GitHub repository](https://github.com/Crystal-Nest/hotbar-refill/issues) or hop into our [Discord server](https://discord.gg/BP6EdBfAmt) and let us know!
 
 ## 📜 **License and right of use**
 

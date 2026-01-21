@@ -3,6 +3,8 @@ package it.crystalnest.hotbar_refill;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 
 /**
  * Plugin configuration.
@@ -12,25 +14,315 @@ public class HotbarRefillConfig {
    * Codec.
    */
   public static final BuilderCodec<HotbarRefillConfig> CODEC = BuilderCodec.builder(HotbarRefillConfig.class, HotbarRefillConfig::new)
-    .append(new KeyedCodec<>("RefillSound", Codec.STRING), (config, value) -> config.refillSound = value, config -> config.refillSound).add()
+    .append(new KeyedCodec<>("SoundEffect", SoundConfig.CODEC), (config, value) -> config.soundConfig = value, config -> config.soundConfig).add()
+    .append(new KeyedCodec<>("InventoryAccess", InventoryConfig.CODEC), (config, value) -> config.inventoryConfig = value, config -> config.inventoryConfig).add()
+    .append(new KeyedCodec<>("RefillBehavior", BehaviorConfig.CODEC), (config, value) -> config.behaviorConfig = value, config -> config.behaviorConfig).add()
     .build();
 
   /**
-   * Default refill sound.
+   * Refill sound configuration.
    */
-  public static final String DEFAULT_REFILL_SOUND = "SFX_Player_Pickup_Item";
+  private SoundConfig soundConfig = new SoundConfig();
 
   /**
-   * Refill sound.
+   * Inventory access configuration.
    */
-  private String refillSound = DEFAULT_REFILL_SOUND;
+  private InventoryConfig inventoryConfig = new InventoryConfig();
 
   /**
-   * Returns the refill sound.
+   * Refill behavior configuration.
+   */
+  private BehaviorConfig behaviorConfig = new BehaviorConfig();
+
+  /**
+   * Returns the refill sound configuration.
    *
-   * @return refill sound.
+   * @return refill sound configuration.
    */
-  public String getRefillSound() {
-    return refillSound;
+  public SoundConfig soundConfig() {
+    return soundConfig;
+  }
+
+  /**
+   * Returns the inventory access configuration.
+   *
+   * @return inventory access configuration.
+   */
+  public InventoryConfig inventoryConfig() {
+    return inventoryConfig;
+  }
+
+  /**
+   * Returns the refill behavior configuration.
+   *
+   * @return refill behavior configuration.
+   */
+  public BehaviorConfig behaviorConfig() {
+    return behaviorConfig;
+  }
+
+  /**
+   * Refill inventory source.
+   */
+  public enum RefillSource {
+    /**
+     * Hotbar inventory.
+     */
+    HOTBAR("Hotbar"),
+    /**
+     * Storage inventory.
+     */
+    STORAGE("Storage"),
+    /**
+     * Backpack inventory.
+     */
+    BACKPACK("Backpack"),
+    /**
+     * Utility inventory.
+     */
+    UTILITY("Utility");
+
+    /**
+     * Returns the RefillSource from its ID.
+     *
+     * @param id ID.
+     * @return RefillSource.
+     */
+    public static RefillSource fromId(String id) {
+      return switch (id) {
+        case "Hotbar" -> HOTBAR;
+        case "Storage" -> STORAGE;
+        case "Backpack" -> BACKPACK;
+        case "Utility" -> UTILITY;
+        default -> throw new IllegalArgumentException("Unknown RefillSource id: " + id);
+      };
+    }
+
+    /**
+     * Returns the corresponding ItemContainer for the given player.
+     *
+     * @param player player.
+     * @return corresponding ItemContainer.
+     */
+    public ItemContainer toContainer(Player player) {
+      return switch (id) {
+        case "Hotbar" -> player.getInventory().getHotbar();
+        case "Storage" -> player.getInventory().getStorage();
+        case "Backpack" -> player.getInventory().getBackpack();
+        case "Utility" -> player.getInventory().getUtility();
+        default -> throw new IllegalArgumentException("Unknown RefillSource id: " + id);
+      };
+    }
+
+    /**
+     * ID.
+     */
+    private final String id;
+
+    /**
+     * @param id {@link #id}.
+     */
+    RefillSource(String id) {
+      this.id = id;
+    }
+
+    /**
+     * Returns the ID.
+     *
+     * @return ID.
+     */
+    public String id() {
+      return id;
+    }
+
+    /**
+     * Returns whether this source is enabled in the given inventory configuration.
+     *
+     * @param config inventory configuration.
+     * @return whether this source is enabled.
+     */
+    public boolean enabled(InventoryConfig config) {
+      return switch (id) {
+        case "Hotbar" -> config.fromHotbar();
+        case "Storage" -> config.fromStorage();
+        case "Backpack" -> config.fromBackpack();
+        case "Utility" -> config.fromUtility();
+        default -> throw new IllegalArgumentException("Unknown RefillSource id: " + id);
+      };
+    }
+  }
+
+  /**
+   * Refill sound configuration.
+   */
+  public static class SoundConfig {
+    /**
+     * Codec.
+     */
+    public static final BuilderCodec<SoundConfig> CODEC = BuilderCodec.builder(SoundConfig.class, SoundConfig::new)
+      .append(new KeyedCodec<>("Enable", Codec.BOOLEAN), (config, value) -> config.enable = value, config -> config.enable).add()
+      .append(new KeyedCodec<>("ID", Codec.STRING), (config, value) -> config.id = value, config -> config.id).add()
+      .build();
+
+    /**
+     * Default refill sound.
+     */
+    public static final String DEFAULT_REFILL_SOUND = "SFX_Player_Pickup_Item";
+
+    /**
+     * Whether the sound effect is enabled.
+     */
+    private boolean enable = true;
+
+    /**
+     * Sound effect to play on refill.
+     */
+    private String id = DEFAULT_REFILL_SOUND;
+
+    /**
+     * Returns whether the sound effect is enabled.
+     *
+     * @return whether the sound effect is enabled.
+     */
+    public boolean enable() {
+      return enable;
+    }
+
+    /**
+     * Returns the sound effect ID to play on refill.
+     *
+     * @return sound effect ID.
+     */
+    public String id() {
+      return id;
+    }
+  }
+
+  /**
+   * Inventory access configuration.
+   */
+  public static class InventoryConfig {
+    /**
+     * Codec.
+     */
+    public static final BuilderCodec<InventoryConfig> CODEC = BuilderCodec.builder(InventoryConfig.class, InventoryConfig::new)
+      .append(new KeyedCodec<>("FromHotbar", Codec.BOOLEAN), (config, value) -> config.fromHotbar = value, config -> config.fromHotbar).add()
+      .append(new KeyedCodec<>("FromBackpack", Codec.BOOLEAN), (config, value) -> config.fromBackpack = value, config -> config.fromBackpack).add()
+      .append(new KeyedCodec<>("FromStorage", Codec.BOOLEAN), (config, value) -> config.fromStorage = value, config -> config.fromStorage).add()
+      .append(new KeyedCodec<>("FromUtility", Codec.BOOLEAN), (config, value) -> config.fromUtility = value, config -> config.fromUtility).add()
+      .append(new KeyedCodec<>("Priority", Codec.STRING_ARRAY), (config, value) -> config.priority = value, config -> config.priority).add()
+      .build();
+
+    /**
+     * Whether the hotbar should be searched for suitable refill items.
+     */
+    private boolean fromHotbar = false;
+
+    /**
+     * Whether the backpack should be searched for suitable refill items.
+     */
+    private boolean fromBackpack = true;
+
+    /**
+     * Whether the storage should be searched for suitable refill items.
+     */
+    private boolean fromStorage = true;
+
+    /**
+     * Whether the utility should be searched for suitable refill items.
+     */
+    private boolean fromUtility = false;
+
+    /**
+     * Priority order for searching refill sources.
+     */
+    private String[] priority = new String[]{RefillSource.STORAGE.id(), RefillSource.BACKPACK.id(), RefillSource.HOTBAR.id(), RefillSource.UTILITY.id()};
+
+    /**
+     * Returns whether to search the hotbar for suitable refill items.
+     *
+     * @return whether to search the hotbar.
+     */
+    public boolean fromHotbar() {
+      return fromHotbar;
+    }
+
+    /**
+     * Returns whether to search the backpack for suitable refill items.
+     *
+     * @return whether to search the backpack.
+     */
+    public boolean fromBackpack() {
+      return fromBackpack;
+    }
+
+    /**
+     * Returns whether to search the storage for suitable refill items.
+     *
+     * @return whether to search the storage.
+     */
+    public boolean fromStorage() {
+      return fromStorage;
+    }
+
+    /**
+     * Returns whether to search the utility for suitable refill items.
+     *
+     * @return whether to search the utility.
+     */
+    public boolean fromUtility() {
+      return fromUtility;
+    }
+
+    /**
+     * Returns the priority order for searching refill sources.
+     *
+     * @return priority order.
+     */
+    public String[] priority() {
+      return priority;
+    }
+  }
+
+  /**
+   * Refill behavior configuration.
+   */
+  public static class BehaviorConfig {
+    /**
+     * Codec.
+     */
+    public static final BuilderCodec<BehaviorConfig> CODEC = BuilderCodec.builder(BehaviorConfig.class, BehaviorConfig::new)
+      .append(new KeyedCodec<>("When", When.CODEC), (config, value) -> config.when = value, config -> config.when).add()
+      .append(new KeyedCodec<>("Similar", Similar.CODEC), (config, value) -> config.similar = value, config -> config.similar).add()
+      .build();
+
+    private When when = new When();
+    private Similar similar = new Similar();
+
+    public static class When {
+      public static final BuilderCodec<When> CODEC = BuilderCodec.builder(When.class, When::new)
+        .append(new KeyedCodec<>("OnBreak", Codec.BOOLEAN), (config, value) -> config.onBreak = value, config -> config.onBreak).add()
+        .append(new KeyedCodec<>("OnPlace", Codec.BOOLEAN), (config, value) -> config.onPlace = value, config -> config.onPlace).add()
+        .append(new KeyedCodec<>("OnToss", Codec.BOOLEAN), (config, value) -> config.onToss = value, config -> config.onToss).add()
+        .append(new KeyedCodec<>("OnEat", Codec.BOOLEAN), (config, value) -> config.onEat = value, config -> config.onEat).add()
+        .build();
+
+      private boolean onBreak = true;
+      private boolean onPlace = true;
+      private boolean onToss = true;
+      private boolean onEat = true;
+    }
+
+    public static class Similar {
+      public static final BuilderCodec<Similar> CODEC = BuilderCodec.builder(Similar.class, Similar::new)
+        .append(new KeyedCodec<>("Tool", Codec.BOOLEAN), (config, value) -> config.tool = value, config -> config.tool).add()
+        .append(new KeyedCodec<>("Food", Codec.BOOLEAN), (config, value) -> config.food = value, config -> config.food).add()
+        .append(new KeyedCodec<>("Block", Codec.BOOLEAN), (config, value) -> config.block = value, config -> config.block).add()
+        .build();
+
+      private boolean tool = true;
+      private boolean food = true;
+      private boolean block = false;
+    }
   }
 }
