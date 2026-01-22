@@ -105,42 +105,19 @@ public class HotbarRefill extends JavaPlugin {
   private void handleTransaction(Player player, ItemStackSlotTransaction transaction) {
     if (transaction.getAction().isRemove() || transaction.getAction().isDestroy()) {
       ItemStack before = transaction.getSlotBefore();
-      if (!ItemStack.isEmpty(before) && allowed(before.getItem(), getConfig().behaviorConfig().category()) && shouldRefill(before, transaction.getSlotAfter()) && bucketCheck(before, transaction.getQuery())) {
-        if (!refill(player, transaction, candidate -> candidate.isEquivalentType(before) && !candidate.isBroken()) && allowed(before.getItem(), getConfig().behaviorConfig().similar())) {
+      if (!ItemStack.isEmpty(before)) {
+        ItemType type = ItemType.compute(before.getItem());
+        if (
+          type.qualifies(getConfig().behaviorConfig().category()) &&
+          shouldRefill(before, transaction.getSlotAfter()) &&
+          bucketCheck(before, transaction.getQuery()) &&
+          !refill(player, transaction, candidate -> candidate.isEquivalentType(before) && !candidate.isBroken()) &&
+          type.qualifies(getConfig().behaviorConfig().similar())
+        ) {
           refill(player, transaction, candidate -> isSameType(before, candidate) && !candidate.isBroken());
         }
       }
     }
-  }
-
-  /**
-   * Checks whether the item is allowed by the given behavior-type configuration.
-   *
-   * @param item item to check.
-   * @param config behavior-type configuration.
-   * @return whether the item is allowed.
-   */
-  private boolean allowed(Item item, HotbarRefillConfig.BehaviorConfig.Type config) {
-    boolean isTool = false;
-    boolean isWeapon = false;
-    boolean isBlock = false;
-    boolean isFood = false;
-    boolean isPotion = false;
-    for (String category : item.getCategories()) {
-      if (category.equals("Items.Foods")) {
-        isFood = true;
-      } else if (category.equals("Items.Tools")) {
-        isTool = true;
-      } else if (category.equals("Items.Weapons")) {
-        isWeapon = true;
-      } else if (category.equals("Items.Potions")) {
-        isPotion = true;
-      } else if (category.startsWith("Blocks")) {
-        isBlock = true;
-      }
-    }
-    boolean isOther = !isTool && !isWeapon && !isBlock && !isFood && !isPotion;
-    return isTool && config.tool() || isWeapon && config.weapon() || isBlock && config.block() || isFood && config.food() || isPotion && config.potion() || (isOther && config.other());
   }
 
   /**
@@ -263,7 +240,7 @@ public class HotbarRefill extends JavaPlugin {
    *
    * @param player player.
    */
-  public void playSound(Player player) {
+  private void playSound(Player player) {
     if (getConfig().soundConfig().enable()) {
       Ref<EntityStore> ref = player.getReference();
       if (ref != null && ref.isValid()) {
