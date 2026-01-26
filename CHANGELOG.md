@@ -11,7 +11,7 @@ and this project adheres to [Crystal Nest Semantic Versioning](https://crystalne
 
 ## [v2.0.1] - 2026/01/26
 
-- Added improved configuration options.
+- Minor performance improvements.
 
 ## [v2.0.0] - 2026/01/21
 
