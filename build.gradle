@@ -128,7 +128,7 @@ idea.project.settings.runConfigurations {
 
 sonar {
   properties {
-    property "sonar.projectKey", "Crystal-Nest_${plugin_id.replace('-', '_')}"
+    property "sonar.projectKey", "Crystal-Nest_$plugin_id"
     property "sonar.organization", "crystal-nest"
     property "sonar.projectVersion", mod_version
     property "sonar.host.url", "https://sonarcloud.io"
