@@ -9,7 +9,11 @@ and this project adheres to [Crystal Nest Semantic Versioning](https://crystalne
 
 - Nothing new.
 
-## [v2.0.1] - 2026/01/26
+## [v2.0.2] - 2026/01/27
+
+- Minor code improvements.
+
+## [v2.0.1] - 2026/01/27
 
 - Minor performance improvements.
 
@@ -24,6 +28,7 @@ and this project adheres to [Crystal Nest Semantic Versioning](https://crystalne
 [Unreleased]: https://github.com/crystal-nest/hotbar-refill
 [README]: https://github.com/crystal-nest/hotbar-refill#readme
 
+[v2.0.2]: https://github.com/crystal-nest/hotbar-refill/releases?q=2.0.2
 [v2.0.1]: https://github.com/crystal-nest/hotbar-refill/releases?q=2.0.1
 [v2.0.0]: https://github.com/crystal-nest/hotbar-refill/releases?q=2.0.0
 [v1.0.0]: https://github.com/crystal-nest/hotbar-refill/releases?q=1.0.0
