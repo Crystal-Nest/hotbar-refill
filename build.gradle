@@ -198,7 +198,7 @@ publisher {
   setDisableEmptyJarCheck(true) // Disable check for valid mod metadata entry in artifact, which could possibly mean that the jar is empty.
   setModtaleID(plugin_id)
   setCurseID(curseforge_id)
-  setGameVersions(["early access", "2026.01.22-6f8bdbdc4", "2026.01.23-d5ecebca9", "2026.01.23-6e2d4fc36"])
+  setGameVersions(["early access", hytale_version])
   setDisplayName("$plugin_title v$project.mod_version")
   setJavaVersions([JavaVersion.VERSION_25]) // Remember to update this to match java_version gradle property.
   github {
