@@ -25,13 +25,13 @@ public record ItemType(boolean isTool, boolean isWeapon, boolean isBlock, boolea
     boolean isFood = false;
     boolean isPotion = false;
     for (String category : item.getCategories()) {
-      if (category.equals("Items.Foods")) {
+      if ("Items.Foods".equals(category)) {
         isFood = true;
-      } else if (category.equals("Items.Tools")) {
+      } else if ("Items.Tools".equals(category)) {
         isTool = true;
-      } else if (category.equals("Items.Weapons")) {
+      } else if ("Items.Weapons".equals(category)) {
         isWeapon = true;
-      } else if (category.equals("Items.Potions")) {
+      } else if ("Items.Potions".equals(category)) {
         isPotion = true;
       } else if (category.startsWith("Blocks")) {
         isBlock = true;

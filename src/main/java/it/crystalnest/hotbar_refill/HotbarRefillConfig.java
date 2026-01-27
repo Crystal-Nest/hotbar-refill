@@ -3,7 +3,7 @@ package it.crystalnest.hotbar_refill;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 
 /**
@@ -83,6 +83,18 @@ public class HotbarRefillConfig {
     UTILITY("Utility");
 
     /**
+     * ID.
+     */
+    private final String id;
+
+    /**
+     * @param id {@link #id}.
+     */
+    RefillSource(String id) {
+      this.id = id;
+    }
+
+    /**
      * Returns the RefillSource from its ID.
      *
      * @param id ID.
@@ -104,26 +116,13 @@ public class HotbarRefillConfig {
      * @param player player.
      * @return corresponding ItemContainer.
      */
-    public ItemContainer toContainer(Player player) {
-      return switch (id) {
-        case "Hotbar" -> player.getInventory().getHotbar();
-        case "Storage" -> player.getInventory().getStorage();
-        case "Backpack" -> player.getInventory().getBackpack();
-        case "Utility" -> player.getInventory().getUtility();
-        default -> throw new IllegalArgumentException("Unknown RefillSource id: " + id);
+    public ItemContainer toContainer(LivingEntity player) {
+      return switch (this) {
+        case HOTBAR -> player.getInventory().getHotbar();
+        case STORAGE -> player.getInventory().getStorage();
+        case BACKPACK -> player.getInventory().getBackpack();
+        case UTILITY -> player.getInventory().getUtility();
       };
-    }
-
-    /**
-     * ID.
-     */
-    private final String id;
-
-    /**
-     * @param id {@link #id}.
-     */
-    RefillSource(String id) {
-      this.id = id;
     }
 
     /**
@@ -142,12 +141,11 @@ public class HotbarRefillConfig {
      * @return whether this source is enabled.
      */
     public boolean enabled(InventoryConfig config) {
-      return switch (id) {
-        case "Hotbar" -> config.fromHotbar();
-        case "Storage" -> config.fromStorage();
-        case "Backpack" -> config.fromBackpack();
-        case "Utility" -> config.fromUtility();
-        default -> throw new IllegalArgumentException("Unknown RefillSource id: " + id);
+      return switch (this) {
+        case HOTBAR -> config.fromHotbar();
+        case STORAGE -> config.fromStorage();
+        case BACKPACK -> config.fromBackpack();
+        case UTILITY -> config.fromUtility();
       };
     }
   }

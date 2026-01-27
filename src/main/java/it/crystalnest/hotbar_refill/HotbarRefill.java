@@ -39,11 +39,6 @@ public class HotbarRefill extends JavaPlugin {
   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
   /**
-   * Singleton instance.
-   */
-  private static HotbarRefill INSTANCE;
-
-  /**
    * Plugin configuration.
    */
   private final Config<HotbarRefillConfig> config = withConfig(HotbarRefillConfig.CODEC);
@@ -53,17 +48,7 @@ public class HotbarRefill extends JavaPlugin {
    */
   public HotbarRefill(@Nonnull JavaPluginInit init) {
     super(init);
-    INSTANCE = this;
     LOGGER.atInfo().log(getName() + " Plugin loaded!");
-  }
-
-  /**
-   * Returns the singleton instance of this plugin.
-   *
-   * @return singleton instance.
-   */
-  public static HotbarRefill get() {
-    return INSTANCE;
   }
 
   /**
@@ -127,7 +112,7 @@ public class HotbarRefill extends JavaPlugin {
    * @param after item stack after the transaction.
    * @return whether the hotbar slot should be refilled.
    */
-  private boolean shouldRefill(@Nonnull ItemStack before, @Nullable ItemStack after) {
+  private static boolean shouldRefill(@Nonnull ItemStack before, @Nullable ItemStack after) {
     return ItemStack.isEmpty(after) || (!before.isBroken() && after.isBroken());
   }
 
@@ -138,7 +123,7 @@ public class HotbarRefill extends JavaPlugin {
    * @param query transaction query.
    * @return whether the bucket check passes.
    */
-  private boolean bucketCheck(ItemStack before, ItemStack query) {
+  private static boolean bucketCheck(ItemStack before, ItemStack query) {
     return !before.getItemId().contains("Bucket") || !before.isEquivalentType(query);
   }
 
@@ -149,7 +134,7 @@ public class HotbarRefill extends JavaPlugin {
    * @param itemStack2 second item.
    * @return whether the two items are the same kind of item.
    */
-  private boolean isSameType(ItemStack itemStack1, ItemStack itemStack2) {
+  private static boolean isSameType(ItemStack itemStack1, ItemStack itemStack2) {
     if (itemStack1.isEquivalentType(itemStack2)) {
       return true;
     }
@@ -191,7 +176,7 @@ public class HotbarRefill extends JavaPlugin {
    * @param interaction interaction type to compare.
    * @return whether the two items have the same interaction.
    */
-  private boolean isSameInteraction(Map<InteractionType, String> interactions1, Map<InteractionType, String> interactions2, InteractionType interaction) {
+  private static boolean isSameInteraction(Map<InteractionType, String> interactions1, Map<InteractionType, String> interactions2, InteractionType interaction) {
     return Objects.equals(interactions1.get(interaction), interactions2.get(interaction));
   }
 
