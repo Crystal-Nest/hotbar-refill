@@ -34,5 +34,5 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # Needed for Sonar analysis
         run: |
           ./gradlew wrapper
-          ./gradlew build --stacktrace
-          ./gradlew sonar --stacktrace -Dsonar.branch.name=${{ github.ref_name }}
+          ./gradlew build --stacktrace --info
+          ./gradlew sonar --stacktrace --info -Dsonar.branch.name=${{ github.ref_name }}
