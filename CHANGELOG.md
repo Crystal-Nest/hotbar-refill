@@ -9,6 +9,10 @@ and this project adheres to [Crystal Nest Semantic Versioning](https://crystalne
 
 - Nothing new.
 
+## [v2.0.3] - 2026/04/10
+
+- Fixed for the latest Hytale release version.
+
 ## [v2.0.2] - 2026/01/27
 
 - Minor code improvements.
@@ -28,6 +32,7 @@ and this project adheres to [Crystal Nest Semantic Versioning](https://crystalne
 [Unreleased]: https://github.com/crystal-nest/hotbar-refill
 [README]: https://github.com/crystal-nest/hotbar-refill#readme
 
+[v2.0.3]: https://github.com/crystal-nest/hotbar-refill/releases?q=2.0.3
 [v2.0.2]: https://github.com/crystal-nest/hotbar-refill/releases?q=2.0.2
 [v2.0.1]: https://github.com/crystal-nest/hotbar-refill/releases?q=2.0.1
 [v2.0.0]: https://github.com/crystal-nest/hotbar-refill/releases?q=2.0.0
