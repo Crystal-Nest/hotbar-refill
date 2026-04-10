@@ -3,8 +3,9 @@ package it.crystalnest.hotbar_refill;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 /**
  * Plugin configuration.
@@ -111,17 +112,16 @@ public class HotbarRefillConfig {
     }
 
     /**
-     * Returns the corresponding ItemContainer for the given player.
+     * Returns the ECS component type for this inventory section.
      *
-     * @param player player.
-     * @return corresponding ItemContainer.
+     * @return the component type for this inventory section.
      */
-    public ItemContainer toContainer(LivingEntity player) {
+    public ComponentType<EntityStore, ? extends InventoryComponent> toComponentType() {
       return switch (this) {
-        case HOTBAR -> player.getInventory().getHotbar();
-        case STORAGE -> player.getInventory().getStorage();
-        case BACKPACK -> player.getInventory().getBackpack();
-        case UTILITY -> player.getInventory().getUtility();
+        case HOTBAR -> InventoryComponent.Hotbar.getComponentType();
+        case STORAGE -> InventoryComponent.Storage.getComponentType();
+        case BACKPACK -> InventoryComponent.Backpack.getComponentType();
+        case UTILITY -> InventoryComponent.Utility.getComponentType();
       };
     }
 

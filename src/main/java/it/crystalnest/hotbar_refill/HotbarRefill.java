@@ -1,19 +1,16 @@
 package it.crystalnest.hotbar_refill;
 
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
-import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -49,60 +46,6 @@ public class HotbarRefill extends JavaPlugin {
   public HotbarRefill(@Nonnull JavaPluginInit init) {
     super(init);
     LOGGER.atInfo().log(getName() + " Plugin loaded!");
-  }
-
-  /**
-   * Returns the plugin configuration.
-   *
-   * @return plugin configuration.
-   */
-  public HotbarRefillConfig getConfig() {
-    return config.get();
-  }
-
-  @Override
-  protected void setup() {
-    LOGGER.atInfo().log("Setting up plugin " + getName());
-    getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, event -> {
-      if (event.getEntity() instanceof Player player && event.getItemContainer() == player.getInventory().getHotbar() && event.getTransaction().succeeded()) {
-        switch (event.getTransaction()) {
-          case ItemStackTransaction transaction -> transaction.getSlotTransactions().forEach(t -> handleTransaction(player, t));
-          case ItemStackSlotTransaction transaction -> handleTransaction(player, transaction);
-          default -> {}
-        }
-      }
-    });
-  }
-
-  @Override
-  protected void start() {
-    config.save();
-  }
-
-  /**
-   * Handles an item stack slot transaction.
-   * <p>
-   * Checks if an item has been depleted from the hotbar and tries to refill it from the player's inventory.
-   *
-   * @param player player.
-   * @param transaction item stack slot transaction.
-   */
-  private void handleTransaction(Player player, ItemStackSlotTransaction transaction) {
-    if (transaction.getAction().isRemove() || transaction.getAction().isDestroy()) {
-      ItemStack before = transaction.getSlotBefore();
-      if (!ItemStack.isEmpty(before)) {
-        ItemType type = ItemType.compute(before.getItem());
-        if (
-          type.qualifies(getConfig().behaviorConfig().category()) &&
-          shouldRefill(before, transaction.getSlotAfter()) &&
-          bucketCheck(before, transaction.getQuery()) &&
-          !refill(player, transaction, candidate -> candidate.isEquivalentType(before) && !candidate.isBroken()) &&
-          type.qualifies(getConfig().behaviorConfig().similar())
-        ) {
-          refill(player, transaction, candidate -> isSameType(before, candidate) && !candidate.isBroken());
-        }
-      }
-    }
   }
 
   /**
@@ -181,20 +124,72 @@ public class HotbarRefill extends JavaPlugin {
   }
 
   /**
+   * Returns the plugin configuration.
+   *
+   * @return plugin configuration.
+   */
+  public HotbarRefillConfig getConfig() {
+    return config.get();
+  }
+
+  @Override
+  protected void setup() {
+    LOGGER.atInfo().log("Setting up plugin " + getName());
+    getEntityStoreRegistry().registerSystem(new PlayerInventoryListeners(this));
+  }
+
+  @Override
+  protected void start() {
+    config.save();
+  }
+
+  /**
+   * Handles an item stack slot transaction.
+   * <p>
+   * Checks if an item has been depleted from the hotbar and tries to refill it from the player's inventory.
+   *
+   * @param archetypeChunk the archetype chunk for accessing entity components.
+   * @param entityIndex the entity index in the archetype chunk.
+   * @param hotbar the hotbar item container.
+   * @param playerRef the player reference for sound playback.
+   * @param transaction item stack slot transaction.
+   */
+  void handleTransaction(ArchetypeChunk<EntityStore> archetypeChunk, int entityIndex, ItemContainer hotbar, PlayerRef playerRef, ItemStackSlotTransaction transaction) {
+    if (transaction.getAction().isRemove() || transaction.getAction().isDestroy()) {
+      ItemStack before = transaction.getSlotBefore();
+      if (!ItemStack.isEmpty(before)) {
+        ItemType type = ItemType.compute(before.getItem());
+        if (
+          type.qualifies(getConfig().behaviorConfig().category()) &&
+          shouldRefill(before, transaction.getSlotAfter()) &&
+          bucketCheck(before, transaction.getQuery()) &&
+          !refill(archetypeChunk, entityIndex, hotbar, playerRef, transaction, candidate -> candidate.isEquivalentType(before) && !candidate.isBroken()) &&
+          type.qualifies(getConfig().behaviorConfig().similar())
+        ) {
+          refill(archetypeChunk, entityIndex, hotbar, playerRef, transaction, candidate -> isSameType(before, candidate) && !candidate.isBroken());
+        }
+      }
+    }
+  }
+
+  /**
    * Refill the hotbar slot if there is a matching item in the player's inventory.
    *
-   * @param player player.
+   * @param archetypeChunk the archetype chunk for accessing entity components.
+   * @param entityIndex the entity index in the archetype chunk.
+   * @param hotbar the hotbar item container.
+   * @param playerRef the player reference for sound playback.
    * @param transaction item stack slot transaction.
    * @param matchCondition condition to determine if an item stack matches the depleted one.
    * @return true if the hotbar slot got refilled, false otherwise.
    */
-  private boolean refill(Player player, ItemStackSlotTransaction transaction, Predicate<ItemStack> matchCondition) {
-    ItemContainer container = getContainer(player);
+  private boolean refill(ArchetypeChunk<EntityStore> archetypeChunk, int entityIndex, ItemContainer hotbar, PlayerRef playerRef, ItemStackSlotTransaction transaction, Predicate<ItemStack> matchCondition) {
+    ItemContainer container = getContainer(archetypeChunk, entityIndex);
     for (short slot = 0; slot < container.getCapacity(); ++slot) {
       ItemStack candidate = container.getItemStack(slot);
       if (!ItemStack.isEmpty(candidate) && matchCondition.test(candidate)) {
-        container.moveItemStackFromSlotToSlot(slot, candidate.getQuantity(), player.getInventory().getHotbar(), transaction.getSlot());
-        playSound(player);
+        container.moveItemStackFromSlotToSlot(slot, candidate.getQuantity(), hotbar, transaction.getSlot());
+        playSound(playerRef);
         return true;
       }
     }
@@ -203,18 +198,25 @@ public class HotbarRefill extends JavaPlugin {
 
   /**
    * Returns the appropriate (combined) item container to search for refill items, based on the plugin configuration.
+   * <p>
+   * Each inventory section (Hotbar, Storage, Backpack, Utility) is a separate ECS component.
+   * This method retrieves each enabled section from the archetype chunk and combines them.
    *
-   * @param player player.
+   * @param archetypeChunk the archetype chunk for accessing entity components.
+   * @param entityIndex the entity index in the archetype chunk.
    * @return appropriate item container.
    */
-  private ItemContainer getContainer(Player player) {
+  private ItemContainer getContainer(ArchetypeChunk<EntityStore> archetypeChunk, int entityIndex) {
     HotbarRefillConfig.InventoryConfig inventoryConfig = getConfig().inventoryConfig();
     String[] priorities = getConfig().inventoryConfig().priority();
     List<ItemContainer> containers = new ArrayList<>(priorities.length);
     for (String id : priorities) {
       HotbarRefillConfig.RefillSource source = HotbarRefillConfig.RefillSource.fromId(id);
       if (source.enabled(inventoryConfig)) {
-        containers.add(source.toContainer(player));
+        InventoryComponent component = archetypeChunk.getComponent(entityIndex, source.toComponentType());
+        if (component != null) {
+          containers.add(component.getInventory());
+        }
       }
     }
     return new CombinedItemContainer(containers.toArray(ItemContainer[]::new));
@@ -223,22 +225,11 @@ public class HotbarRefill extends JavaPlugin {
   /**
    * Plays a sound effect for the player when a hotbar slot gets refilled.
    *
-   * @param player player.
+   * @param playerRef the player reference.
    */
-  private void playSound(Player player) {
+  private void playSound(PlayerRef playerRef) {
     if (getConfig().soundConfig().enable()) {
-      Ref<EntityStore> ref = player.getReference();
-      if (ref != null && ref.isValid()) {
-        Store<EntityStore> store = ref.getStore();
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        if (playerRef != null && playerRef.isValid()) {
-          SoundUtil.playSoundEvent2dToPlayer(playerRef, SoundEvent.getAssetMap().getIndexOrDefault(getConfig().soundConfig().id(), SoundEvent.getAssetMap().getIndex(HotbarRefillConfig.SoundConfig.DEFAULT_REFILL_SOUND)), SoundCategory.UI);
-        } else {
-          LOGGER.atWarning().log("Could not play refill sound because the Player reference is not valid!");
-        }
-      } else {
-        LOGGER.atWarning().log("Could not play refill sound because the EntityStore reference is not valid!");
-      }
+      SoundUtil.playSoundEvent2dToPlayer(playerRef, SoundEvent.getAssetMap().getIndexOrDefault(getConfig().soundConfig().id(), SoundEvent.getAssetMap().getIndex(HotbarRefillConfig.SoundConfig.DEFAULT_REFILL_SOUND)), SoundCategory.UI);
     }
   }
 }
